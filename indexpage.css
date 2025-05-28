@@ -4,6 +4,9 @@
 }
 /*DESKTOP*/
 @media (min-width: 801px) {
+    html{
+        cursor: url('assmeisha.png') 16 16, auto;
+    }
     header {
         border: 2px solid black;
         text-align: left;
@@ -20,9 +23,8 @@
         background-image: url(/patt.jpg);
         background-size: 100px;
         background-repeat: repeat;
-        
     }
- 
+   
     button#changeStylesButton {
     position: fixed;
     top: 10px; 
@@ -78,7 +80,7 @@
         padding-inline: 60px;
     }
     h3 {
-        color: rgb(0, 255, 26);
+        color: rgb(255, 98, 0);
         font-family: papyrus;
         font-style: bold;
     }

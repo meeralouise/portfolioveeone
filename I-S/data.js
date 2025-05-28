@@ -120,5 +120,10 @@ var data = [
         name: 'Dossier Perfume Bottle Rebrand',
         date: '12/2023',
         imageUrl: 'work/dossierheadon.png',
+    },
+    {
+        name: 'I wake up and I just play excerpt',
+        date: '10/2023',
+        imageUrl:'work/My Scans_17.jpg',
     }
 ]

@@ -1,82 +1,78 @@
-const accessToken = '4rETQzQOVolJsTJiVS0Av50ZTv1WqCtNlyjfDHssBHI';
-const channelSlug = 'everything-open';
-const blocksContainer = document.getElementById('blocks-container');
+const channelSlug = "meera-sunil-portfolio-workspace";
+const accessToken = "ZwsQIyFeN_pIEBGVISuvzVeD_jn-l2qKZo-e8nFBFH8";
 
-// URL for fetching the blocks in the specified channel
-const baseUrl = `https://api.are.na/v2/channels/${channelSlug}/blocks`;
+let allBlocks = [];
+let renderedCount = 0;
+const blocksPerLoad = 100;
 
-// Function to fetch all blocks with pagination
-async function fetchAllBlocks(url) {
-    let allBlocks = [];
-    let page = 1;
-    const perPage = 20; // Number of blocks per request (can adjust as needed)
+async function fetchAllBlocks(page = 1, accumulatedBlocks = []) {
+    const perPage = 100;
+    const url = `https://api.are.na/v2/channels/${channelSlug}/contents?per=${perPage}&page=${page}`;
 
-    while (true) {
-        const response = await fetch(`${url}?page=${page}&per=${perPage}`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
+    try {
+        const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${accessToken}` }
         });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
         const data = await response.json();
-        const blocks = data.contents || data.blocks || data;
+        const newBlocks = accumulatedBlocks.concat(data.contents);
 
-        if (!blocks || !Array.isArray(blocks)) {
-            throw new Error('Blocks not found or not an array');
+        if (data.contents.length === perPage) {
+            return fetchAllBlocks(page + 1, newBlocks);
+        } else {
+            return newBlocks;
         }
-
-        allBlocks = allBlocks.concat(blocks);
-
-        // Break the loop if we have received all blocks
-        if (blocks.length < perPage) {
-            break;
-        }
-
-        page++; // Move to the next page
+    } catch (error) {
+        console.error("Error fetching blocks:", error);
+        return accumulatedBlocks;
     }
-
-    return allBlocks;
 }
 
-// Function to render blocks
-function renderBlocks(blocks) {
-    blocks.forEach(block => {
-        const blockElement = document.createElement('div');
-        blockElement.className = 'block';
+function renderBlocks(blocks, start, end) {
+    const container = document.getElementById("portfolio");
+    const subset = blocks.slice(start, end);
 
-        // Render different block types (text, image, link, etc.)
-        if (block.class === 'Text') {
-            const textElement = document.createElement('p');
-            textElement.textContent = block.content;
-            blockElement.appendChild(textElement);
-        } else if (block.class === 'Image') {
-            const imageElement = document.createElement('img');
-            imageElement.src = block.image.original.url;
-            blockElement.appendChild(imageElement);
-        } else if (block.class === 'Link') {
-            const linkElement = document.createElement('a');
-            linkElement.href = block.source.url;
-            linkElement.textContent = block.title || block.source.url;
-            blockElement.appendChild(linkElement);
-        } else if (block.class === 'Media') {
-            // Handle other media types like videos, PDFs, etc.
-            const mediaElement = document.createElement('p');
-            mediaElement.textContent = `Media Block: ${block.title || 'No Title'}`;
-            blockElement.appendChild(mediaElement);
+    subset.forEach(block => {
+        const blockElement = document.createElement("div");
+        blockElement.classList.add("block");
+
+        if (block.class === "Image") {
+            const imageUrl = block.image.original.url;
+            blockElement.innerHTML = `<img src="${imageUrl}" alt="Image Block" />`;
+        } else if (block.class === "Text") {
+            blockElement.innerHTML = `<p>${block.content}</p>`;
+        } else if (block.class === "Link") {
+            blockElement.innerHTML = `<a href="${block.source.url}" target="_blank">${block.source.url}</a>`;
+        } else if (block.class === "Media") {
+            if (block.image?.original?.url) {
+                blockElement.innerHTML = `<video controls src="${block.image.original.url}"></video>`;
+            } else {
+                blockElement.innerHTML = `<p>Unsupported media type</p>`;
+            }
+        } else {
+            blockElement.innerHTML = `<p>Unsupported block type: ${block.class}</p>`;
         }
 
-        // Append the block element to the container
-        blocksContainer.appendChild(blockElement);
+        container.appendChild(blockElement);
     });
+
+    renderedCount += subset.length;
+
+    // Show "Load More" if there's more to show
+    const loadMoreBtn = document.getElementById("load-more");
+    if (renderedCount < blocks.length) {
+        loadMoreBtn.style.display = "block";
+    } else {
+        loadMoreBtn.style.display = "none";
+    }
 }
 
-// Fetch and render all blocks
-fetchAllBlocks(baseUrl)
-    .then(renderBlocks)
-    .catch(error => {
-        console.error('There was a problem with the fetch operation:', error);
-    });
+document.getElementById("load-more").addEventListener("click", () => {
+    renderBlocks(allBlocks, renderedCount, renderedCount + blocksPerLoad);
+});
+
+fetchAllBlocks().then(blocks => {
+    // Sort by created_at descending (newest first)
+    allBlocks = blocks.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    renderBlocks(allBlocks, 0, blocksPerLoad);
+});
