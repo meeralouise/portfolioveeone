@@ -5,6 +5,7 @@ let allBlocks = [];
 let renderedCount = 0;
 const blocksPerLoad = 100;
 
+// Fetch all blocks recursively
 async function fetchAllBlocks(page = 1, accumulatedBlocks = []) {
     const perPage = 100;
     const url = `https://api.are.na/v2/channels/${channelSlug}/contents?per=${perPage}&page=${page}`;
@@ -28,6 +29,7 @@ async function fetchAllBlocks(page = 1, accumulatedBlocks = []) {
     }
 }
 
+// Render blocks in the grid
 function renderBlocks(blocks, start, end) {
     const container = document.getElementById("portfolio");
     const subset = blocks.slice(start, end);
@@ -45,7 +47,7 @@ function renderBlocks(blocks, start, end) {
             blockElement.innerHTML = `<a href="${block.source.url}" target="_blank">${block.source.url}</a>`;
         } else if (block.class === "Media") {
             if (block.image?.original?.url) {
-                blockElement.innerHTML = `<video controls src="${block.image.original.url}"></video>`;
+                blockElement.innerHTML = `<video controls src="${block.image.original.url} class="clickable-media"></video>`;
             } else {
                 blockElement.innerHTML = `<p>Unsupported media type</p>`;
             }
@@ -58,21 +60,63 @@ function renderBlocks(blocks, start, end) {
 
     renderedCount += subset.length;
 
-    // Show "Load More" if there's more to show
+    // Show/hide Load More button
     const loadMoreBtn = document.getElementById("load-more");
-    if (renderedCount < blocks.length) {
-        loadMoreBtn.style.display = "block";
-    } else {
-        loadMoreBtn.style.display = "none";
+    loadMoreBtn.style.display = renderedCount < blocks.length ? "block" : "none";
+
+    // Add click-to-expand modal listeners after rendering
+    addModalListeners();
+}
+
+// Add click-to-expand modal for images and videos
+function addModalListeners() {
+    const modal = document.getElementById("myModal");
+    const modalImg = document.getElementById("modalImg");
+    const modalVideo = document.getElementById("modalVideo"); // optional, if you use a video tag
+    const closeBtn = document.getElementsByClassName("close")[0];
+
+    // Images
+    document.querySelectorAll('.block img').forEach(img => {
+        img.onclick = () => {
+            modal.style.display = "flex";
+            modal.innerHTML = `<span class="close">&times;</span><img class="modal-content" src="${img.src}">`;
+            addModalCloseListener();
+        }
+    });
+
+    // Videos
+    document.querySelectorAll('.block video').forEach(video => {
+        video.onclick = () => {
+            modal.style.display = "flex";
+            modal.innerHTML = `<span class="close">&times;</span><video class="modal-content" controls autoplay src="${video.src}"></video>`;
+            addModalCloseListener();
+        }
+    });
+
+    function addModalCloseListener() {
+        const closeBtn = modal.getElementsByClassName("close")[0];
+        closeBtn.onclick = () => { modal.style.display = "none"; };
+        modal.onclick = (e) => { if(e.target === modal) modal.style.display = "none"; };
     }
 }
 
+// Load more button
 document.getElementById("load-more").addEventListener("click", () => {
     renderBlocks(allBlocks, renderedCount, renderedCount + blocksPerLoad);
 });
 
+// Fetch blocks, shuffle, and render first batch
 fetchAllBlocks().then(blocks => {
-    // Sort by created_at descending (newest first)
-    allBlocks = blocks.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    allBlocks = shuffleArray(blocks);
     renderBlocks(allBlocks, 0, blocksPerLoad);
 });
+
+// Shuffle helper
+function shuffleArray(array) {
+    const shuffled = array.slice();
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
